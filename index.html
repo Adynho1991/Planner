@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<title>Planner</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f4f6f8;color:#111827}
+.app{max-width:720px;margin:auto;padding:20px 16px 40px}.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+h1{margin:0;font-size:32px}.sub{color:#6b7280;margin-top:4px}
+.card{background:white;border-radius:18px;padding:18px;margin:12px 0;box-shadow:0 3px 14px #00000010}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.stat{text-align:center;background:#f8fafc;border-radius:14px;padding:14px 6px}.num{font-size:25px;font-weight:700}.label{font-size:12px;color:#6b7280}
+.progress{height:12px;background:#e5e7eb;border-radius:99px;overflow:hidden;margin-top:10px}.bar{height:100%;width:0;background:#22c55e;transition:.25s}
+form{display:grid;gap:10px}input,select,button{font:inherit;border-radius:12px;padding:13px;border:1px solid #d1d5db}button{border:0;background:#111827;color:white;font-weight:700;cursor:pointer}
+.task{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid #eee}.task:last-child{border-bottom:0}.task.done{background:#ecfdf5;border-radius:12px;padding:12px}.task-main{flex:1}.task-title{font-weight:650}.task.done .task-title{text-decoration:line-through;color:#15803d}.date{font-size:12px;color:#6b7280;margin-top:4px}.late{color:#dc2626;font-weight:600}.delete{background:#fee2e2;color:#b91c1c;padding:8px 10px}
+.empty{text-align:center;color:#6b7280;padding:25px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="head"><div><h1>Planner</h1><div class="sub">Obiectivele mele</div></div></div>
+
+  <div class="card">
+    <div class="stats">
+      <div class="stat"><div class="num" id="total">0</div><div class="label">TOTAL</div></div>
+      <div class="stat"><div class="num" id="done">0</div><div class="label">FINALIZATE</div></div>
+      <div class="stat"><div class="num" id="percent">0%</div><div class="label">PROGRES</div></div>
+    </div>
+    <div class="progress"><div class="bar" id="bar"></div></div>
+  </div>
+
+  <div class="card">
+    <h2>Adaugă obiectiv</h2>
+    <form id="form">
+      <input id="title" placeholder="Ex.: Sun clientul pentru ofertă" required>
+      <input id="date" type="date">
+      <button>+ Adaugă obiectiv</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Obiective</h2>
+    <div id="list" class="empty">Nu ai obiective încă.</div>
+  </div>
+</div>
+
+<script>
+const KEY="planner_v1_tasks";
+let tasks=JSON.parse(localStorage.getItem(KEY)||"[]");
+const $=id=>document.getElementById(id);
+function save(){localStorage.setItem(KEY,JSON.stringify(tasks));render()}
+function render(){
+  const total=tasks.length, done=tasks.filter(t=>t.done).length, pct=total?Math.round(done/total*100):0;
+  $("total").textContent=total;$("done").textContent=done;$("percent").textContent=pct+"%";$("bar").style.width=pct+"%";
+  if(!total){$("list").className="empty";$("list").textContent="Nu ai obiective încă.";return}
+  $("list").className="";
+  $("list").innerHTML=tasks.map((t,i)=>{
+    const overdue=t.date&&!t.done&&new Date(t.date+"T23:59:59")<new Date();
+    const d=t.date?new Date(t.date+"T00:00:00").toLocaleDateString("ro-RO"):"Fără termen";
+    return `<div class="task ${t.done?"done":""}">
+      <input type="checkbox" ${t.done?"checked":""} onchange="toggle(${i})">
+      <div class="task-main"><div class="task-title">${escapeHtml(t.title)}</div><div class="date ${overdue?"late":""}">${overdue?"⚠ Termen depășit · ":""}${d}</div></div>
+      <button class="delete" onclick="removeTask(${i})">Șterge</button>
+    </div>`;
+  }).join("");
+}
+function escapeHtml(s){return s.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+$("form").addEventListener("submit",e=>{e.preventDefault();tasks.push({title:$("title").value.trim(),date:$("date").value,done:false});$("title").value="";$("date").value="";save()});
+function toggle(i){tasks[i].done=!tasks[i].done;save()}
+function removeTask(i){tasks.splice(i,1);save()}
+render();
+</script>
+</body>
+</html>
