@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<title>Planner V2</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f4f6f8;color:#111827}
+.app{max-width:720px;margin:auto;padding:20px 16px 40px}
+h1{margin:0;font-size:32px}.sub{color:#6b7280;margin-top:4px}
+.card{background:#fff;border-radius:18px;padding:18px;margin:12px 0;box-shadow:0 3px 14px #00000010}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{text-align:center;background:#f8fafc;border-radius:14px;padding:14px 6px}
+.num{font-size:25px;font-weight:700}.label{font-size:12px;color:#6b7280}
+.progress{height:12px;background:#e5e7eb;border-radius:99px;overflow:hidden;margin-top:10px}
+.bar{height:100%;width:0;background:#22c55e;transition:.25s}
+form{display:grid;gap:10px}
+input,select,button{font:inherit;border-radius:12px;padding:13px;border:1px solid #d1d5db;width:100%}
+button{border:0;background:#111827;color:white;font-weight:700}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.task{padding:14px;margin:10px 0;border-radius:14px;border-left:5px solid #ef4444;background:#fff1f2}
+.task.done{border-left-color:#22c55e;background:#ecfdf5}
+.row{display:flex;align-items:center;gap:10px}.check{width:24px;height:24px}
+.task-main{flex:1}.task-title{font-weight:700}.task.done .task-title{text-decoration:line-through;color:#15803d}
+.meta{font-size:12px;color:#6b7280;margin-top:6px;line-height:1.5}
+.late{color:#dc2626;font-weight:700}.ok{color:#15803d;font-weight:700}
+.delete{background:#fee2e2;color:#b91c1c;padding:8px 10px;width:auto}
+.empty{text-align:center;color:#6b7280;padding:25px}
+.badge{display:inline-block;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:700;background:#e5e7eb}
+</style>
+</head>
+<body>
+<div class="app">
+<header><h1>Planner</h1><div class="sub">Obiectivele mele</div></header>
+
+<div class="card">
+ <div class="stats">
+  <div class="stat"><div class="num" id="total">0</div><div class="label">TOTAL</div></div>
+  <div class="stat"><div class="num" id="done">0</div><div class="label">FINALIZATE</div></div>
+  <div class="stat"><div class="num" id="percent">0%</div><div class="label">PROGRES</div></div>
+ </div>
+ <div class="progress"><div class="bar" id="bar"></div></div>
+</div>
+
+<div class="card">
+<h2>Adaugă obiectiv</h2>
+<form id="form">
+<input id="title" placeholder="Ex.: Sun clientul pentru ofertă" required>
+<div class="grid">
+ <div><label>Început</label><input id="start" type="date"></div>
+ <div><label>Termen final</label><input id="end" type="date"></div>
+</div>
+<button>+ Adaugă obiectiv</button>
+</form>
+</div>
+
+<div class="card">
+<h2>Obiective</h2>
+<div id="list" class="empty">Nu ai obiective încă.</div>
+</div>
+</div>
+
+<script>
+const KEY="planner_v2_tasks";
+let tasks=JSON.parse(localStorage.getItem(KEY)||"[]");
+
+function save(){localStorage.setItem(KEY,JSON.stringify(tasks));render()}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+function fmt(d){return d?new Date(d+"T00:00:00").toLocaleDateString("ro-RO"):"—"}
+
+function render(){
+ const total=tasks.length, done=tasks.filter(t=>t.done).length, pct=total?Math.round(done/total*100):0;
+ document.getElementById("total").textContent=total;
+ document.getElementById("done").textContent=done;
+ document.getElementById("percent").textContent=pct+"%";
+ document.getElementById("bar").style.width=pct+"%";
+ const list=document.getElementById("list");
+ if(!total){list.className="empty";list.textContent="Nu ai obiective încă.";return}
+ list.className="";
+ list.innerHTML=tasks.map((t,i)=>{
+   const overdue=t.end&&!t.done&&new Date(t.end+"T23:59:59")<new Date();
+   const status=t.done?"DA":"NU";
+   return `<div class="task ${t.done?"done":""}">
+    <div class="row">
+      <input class="check" type="checkbox" ${t.done?"checked":""} onchange="toggle(${i})">
+      <div class="task-main">
+       <div class="task-title">${esc(t.title)}</div>
+       <div class="meta">
+        Perioada: ${fmt(t.start)} → ${fmt(t.end)}<br>
+        Status: <span class="badge">${status}</span>
+        ${overdue?'<br><span class="late">⚠ Termen depășit</span>':t.done?'<br><span class="ok">✓ Finalizat</span>':''}
+       </div>
+      </div>
+      <button class="delete" onclick="removeTask(${i})">Șterge</button>
+    </div>
+   </div>`;
+ }).join("");
+}
+
+document.getElementById("form").addEventListener("submit",e=>{
+ e.preventDefault();
+ const title=document.getElementById("title").value.trim();
+ const start=document.getElementById("start").value;
+ const end=document.getElementById("end").value;
+ if(end && start && end<start){alert("Termenul final nu poate fi înaintea datei de început.");return}
+ tasks.push({title,start,end,done:false});
+ document.getElementById("title").value="";
+ document.getElementById("start").value="";
+ document.getElementById("end").value="";
+ save();
+});
+function toggle(i){tasks[i].done=!tasks[i].done;save()}
+function removeTask(i){tasks.splice(i,1);save()}
+render();
+</script>
+</body>
+</html>
