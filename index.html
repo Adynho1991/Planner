@@ -467,5 +467,41 @@ if ("serviceWorker" in navigator) {
       .catch(err => console.error("Service Worker:", err));
   });
 }
-</script>/body>
+</script>
+  </script>
+
+<script>
+const notificationButton = document.createElement("button");
+notificationButton.textContent = "🔔 Activează notificările";
+notificationButton.style.cssText =
+  "width:100%;padding:14px;margin:15px 0;border:0;border-radius:12px;background:#111827;color:white;font-size:17px;font-weight:600;";
+
+document.querySelector(".app").appendChild(notificationButton);
+
+notificationButton.addEventListener("click", async () => {
+  if (!("Notification" in window)) {
+    alert("Notificările nu sunt disponibile în acest browser.");
+    return;
+  }
+
+  const permission = await Notification.requestPermission();
+
+  if (permission !== "granted") {
+    alert("Notificările nu sunt activate.");
+    return;
+  }
+
+  const registration = await navigator.serviceWorker.ready;
+
+  await registration.showNotification("Planner 🔔", {
+    body: "Notificările sunt activate cu succes!",
+    icon: "./icon-192.png",
+    badge: "./icon-192.png"
+  });
+
+  notificationButton.textContent = "✅ Notificările sunt active";
+});
+</script>
+
+</body>
 </html>
