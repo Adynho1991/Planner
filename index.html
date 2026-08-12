@@ -468,9 +468,49 @@ if ("serviceWorker" in navigator) {
   });
 }
 </script>
-  </script>
 
 <script>
+async function verificaRemindere() {
+  const acum = new Date();
+  const dataAzi = acum.toISOString().slice(0, 10);
+  const oraAzi = acum.toTimeString().slice(0, 5);
+
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+
+    try {
+      const date = JSON.parse(localStorage.getItem(key));
+
+      if (!Array.isArray(date)) continue;
+
+      date.forEach(async task => {
+        if (!task || task.done) return;
+
+        const dataTask = task.date || "";
+        const oraTask = task.start || task.time || "";
+
+        if (dataTask !== dataAzi || oraTask !== oraAzi) return;
+
+        const reminderKey = "reminder_" + (task.id || task.title) + "_" + dataAzi + "_" + oraAzi;
+
+        if (sessionStorage.getItem(reminderKey)) return;
+
+        const registration = await navigator.serviceWorker.ready;
+
+        await registration.showNotification("🔔 Planner", {
+          body: task.title || "Ai un obiectiv programat acum!",
+          icon: "./icon-192.png",
+          badge: "./icon-192.png"
+        });
+
+        sessionStorage.setItem(reminderKey, "1");
+      });
+    } catch (e) {}
+  }
+}
+
+setInterval(verificaRemindere, 10000);
+verificaRemindere();
 const notificationButton = document.createElement("button");
 notificationButton.textContent = "🔔 Activează notificările";
 notificationButton.style.cssText =
